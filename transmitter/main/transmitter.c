@@ -21,7 +21,7 @@
 #include "../components/i2c.h"
 
 #define ESPNNOW_SEND_COUNT 1000
-#define ESPNOW_SEND_DELAY   20
+#define ESPNOW_SEND_DELAY   500
 #define ESPNOW_SEND_LEN     200
 
 int throttle, yaw, pitch, roll;
