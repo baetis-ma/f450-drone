@@ -163,12 +163,14 @@ static int ssd1305_text( char *disp_string )
       else if(disp_string[n]=='4' && framebuf_ptr%128 == 0){size = 4;++framebuf_ptr;}
       else if(size == 1){
          for(int a=0; a < 5; a++){
-             framebuffer[framebuf_ptr++] = fonttable5x7[(a + 5*(disp_string[n]-' ' ))%1024]; } 
+             framebuffer[framebuf_ptr++] = fonttable5x7[a + 5*(disp_string[n]-' ')] ;
+             } 
          framebuf_ptr++; }
       else if(size == 2 || size == 4){ //twice as wide
           for(int a=0; a < 5; a++){
-             framebuffer[framebuf_ptr++] = fonttable5x7[(a + 5*(disp_string[n]-' ' ))%1024]; 
-             framebuffer[framebuf_ptr++] = fonttable5x7[(a + 5*(disp_string[n]-' ' ))%1024]; 
+             ft = fonttable5x7[a + 5*(disp_string[n]-' ')] ;
+             framebuffer[framebuf_ptr++] = ft;
+             framebuffer[framebuf_ptr++] = ft;
              if(size == 4){ //twice as big
                  f0 = 0; f1 = 0; 
                  ft = fonttable5x7[a + 5*(disp_string[n]-' ')] ;

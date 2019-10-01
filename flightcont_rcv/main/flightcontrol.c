@@ -20,7 +20,7 @@ int throttle, yaw, pitch, roll;
 
 //requirements for espnow
 #define ESPNNOW_SEND_COUNT  1000
-#define ESPNOW_SEND_DELAY   500
+#define ESPNOW_SEND_DELAY   100
 #define ESPNOW_SEND_LEN     200
 static uint8_t s_tx_mac[ESP_NOW_ETH_ALEN] = { 0xde, 0x4f, 0x22, 0x17, 0xf5, 0x6a };
 #include "./espnow.h"

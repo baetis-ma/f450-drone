@@ -19,14 +19,13 @@
 
 #include "driver/i2c.h"
 #include "../components/i2c.h"
+#include "../components/ssd1306.h"
 
 #define ESPNNOW_SEND_COUNT 1000
-#define ESPNOW_SEND_DELAY   500
+#define ESPNOW_SEND_DELAY   (100-10)
 #define ESPNOW_SEND_LEN     200
 
 int throttle, yaw, pitch, roll;
-int pktout = 0;
-int pktin  = 0;
 
 static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x24, 0x6F, 0x28, 0x17, 0xff, 0xc8 };
 static xQueueHandle espnow_queue;
@@ -154,8 +153,6 @@ static void espnow_task(void *pvParameter)
     int recv_magic = 0;
     int ret;
 
-    vTaskDelay(5000 / portTICK_RATE_MS);
-
     espnow_send_param_t *send_param = (espnow_send_param_t *)pvParameter;
     if (esp_now_send(send_param->dest_mac, send_param->buffer, send_param->len) != ESP_OK) {
         ESP_LOGE("", "Send error");
@@ -167,7 +164,6 @@ static void espnow_task(void *pvParameter)
         switch (evt.id) {
             case ESPNOW_SEND_CB:
             {
-                ++pktout;
                 espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
                 //ESP_LOGD("", "Send data to "MACSTR", status1: %d", 
                                        //MAC2STR(send_cb->mac_addr), send_cb->status);
@@ -182,11 +178,11 @@ static void espnow_task(void *pvParameter)
                     espnow_deinit(send_param);
                     vTaskDelete(NULL);
                 }
+                ESP_LOGI("", "control packet sent");
                 break;
             }
             case ESPNOW_RECV_CB:
             {
-                ++pktin;
                 espnow_event_recv_cb_t *recv_cb = &evt.info.recv_cb;
                 ret = espnow_data_parse(recv_cb->data, recv_cb->data_len, &recv_state, &recv_seq, &recv_magic);
                 free(recv_cb->data);
@@ -267,24 +263,14 @@ static void espnow_deinit(espnow_send_param_t *send_param)
     esp_now_deinit();
 }
 
-void app_main()
+static void collect_controls () 
 {
-    // Initialize NVS
-    ESP_ERROR_CHECK( nvs_flash_init() );
-
-    wifi_init();
-    espnow_init();
-
-    i2c_init();
-    i2cdetect();
-
     uint8_t tmp_str[2];
     int throt_off = 0;
     while(1){
        tmp_str[0] = 0x40; 
        tmp_str[1] = 0xc0; 
        i2c_write_block( 0x4a, 0x01, tmp_str, 2);
-       vTaskDelay(5);
        i2c_read( 0x4a, 0x00, tmp_str, 2);
        throt_off = throt_off + ((((256*tmp_str[0]+tmp_str[1])/16)-543)/10);
        if(throt_off > 600){ throt_off= 600; }
@@ -294,23 +280,51 @@ void app_main()
        tmp_str[0] = 0x50; 
        tmp_str[1] = 0xc0; 
        i2c_write_block( 0x4a, 0x01, tmp_str, 2);
-       vTaskDelay(5);
        i2c_read( 0x4a, 0x00, tmp_str, 2);
        yaw = 1500 - (((256*tmp_str[0]+tmp_str[1])/16)-566)/10;
 
        tmp_str[0] = 0x60; 
        tmp_str[1] = 0xc0; 
        i2c_write_block( 0x4a, 0x01, tmp_str, 2);
-       vTaskDelay(5);
        i2c_read( 0x4a, 0x00, tmp_str, 2);
        pitch = 1500 - (((256*tmp_str[0]+tmp_str[1])/16)-545)/10;
 
        tmp_str[0] = 0x70; 
        tmp_str[1] = 0xc0; 
        i2c_write_block( 0x4a, 0x01, tmp_str, 2);
-       vTaskDelay(5);
        i2c_read( 0x4a, 0x00, tmp_str, 2);
        roll = 1500 + (((256*tmp_str[0]+tmp_str[1])/16)-560)/10;
 
+       vTaskDelay((100-10)/portTICK_RATE_MS); 
+       ESP_LOGI("","collected all data");
     }
+
+}
+
+void app_main()
+{
+    // Initialize NVS
+    ESP_ERROR_CHECK( nvs_flash_init() );
+
+    wifi_init();
+    vTaskDelay(10);
+    espnow_init(); //sets up espnow_task
+
+    i2c_init();
+    i2cdetect();
+    ssd1305_init();
+
+    vTaskDelay(10);
+
+    xTaskCreate(collect_controls, "collect_controls_task", 1048, NULL, 5, NULL);
+     
+    char disp_str[128];
+    while(1) {   //actuall using ssd1305 (128x32) so size 4 only
+       sprintf(disp_str, "4 Throt %4d|| Yaw   %4d|| Pitch %4d|| Roll  %4d",
+             throttle, yaw, pitch, roll);
+       printf("%s\n",disp_str);
+       ssd1305_text(disp_str);
+       vTaskDelay((500)/portTICK_RATE_MS); 
+    }
+
 }
