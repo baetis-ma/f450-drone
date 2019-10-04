@@ -27,7 +27,7 @@
 
 int throttle, yaw, pitch, roll;
 
-static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x24, 0x6F, 0x28, 0x17, 0xff, 0xc8 };
+static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x24, 0x0a, 0xc4, 0x31, 0x87, 0x60 };
 static xQueueHandle espnow_queue;
 static uint16_t s_espnow_seq[ESPNOW_DATA_MAX] = { 0, 0 };
 static void espnow_deinit(espnow_send_param_t *send_param);
