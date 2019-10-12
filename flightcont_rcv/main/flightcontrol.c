@@ -47,8 +47,10 @@ static uint8_t s_tx_mac[ESP_NOW_ETH_ALEN] = { 0xde, 0x4f, 0x22, 0x17, 0xf5, 0x6a
 //4 pole butterworth high pass filter >1Hz
 float gyrx[5], gyry[5], gyrz[5];
 float tgyrx[5], tgyry[5], tgyrz[5];
-float coeff_lp4[5] = {2.072820954e+02, -0.1873794924, 1.0546654059, -2.3139884144, 2.3695130072 };
-float coeff_lp1[5] = {7.522343863e+04, -0.7199103273, 3.1159669252, -5.0679983867, 3.6717290892 };
+float coeff_lp10[5]   = {2.146710182e+01, -0.0301188750, 0.1826756978, -0.6799785269, 0.7820951980 };
+float coeff_lp4[5]    = {2.072820954e+02, -0.1873794924, 1.0546654059, -2.3139884144, 2.3695130072 };
+float coeff_lp1[5]    = {7.522343863e+04, -0.7199103273, 3.1159669252, -5.0679983867, 3.6717290892 };
+float coeff_lp0_25[5] = {1.710822297e+07, -0.9211819292, 3.7603495077, -5.7570763791, 3.9179078654 };
 static void accel_state_lp() 
 {
     uint8_t regdata[6]; 
@@ -103,16 +105,31 @@ static void accel_state_lp()
 static void accel_cal() 
 {
     uint8_t regdata[6]; 
-    i2c_read(0x68, 0x3b, regdata, 6);
-    acclx_cal =  (256*regdata[0] + regdata[1]);
+    int num_avg = 16;
+    acclx_cal = 0;
+    accly_cal = 0;
+    acclz_cal = 0;
+
+    for(int a=0; a<num_avg; a++){
+        i2c_read(0x68, 0x3b, regdata, 6);
+        acclx_cal = acclx_cal + 256*regdata[0] + regdata[1];
+        accly_cal = accly_cal + 256*regdata[2] + regdata[3];
+        acclz_cal = acclz_cal + 256*regdata[4] + regdata[5];
+        vTaskDelay(10);
+    }
+    acclx_cal = acclx_cal / num_avg; 
+    accly_cal = accly_cal / num_avg; 
+    acclz_cal = acclz_cal / num_avg;
+
+    //acclx_cal =  (256*regdata[0] + regdata[1]);
     if (acclx_cal >= 0x8000) { acclx_cal = -1.0*(0xffff - acclx_cal); } //2s comp
     acclx_cal = -1.0 * acclx_cal / 0x4000; //full scale +/- 2g
 
-    accly_cal =  (256*regdata[2] + regdata[3]);
+    //accly_cal =  (256*regdata[2] + regdata[3]);
     if (accly_cal >= 0x8000) { accly_cal = -1.0*(0xffff - accly_cal); }
     accly_cal = -1.0 * accly_cal / 0x4000;
 
-    acclz_cal =  (256*regdata[4] + regdata[5]);
+    //acclz_cal =  (256*regdata[4] + regdata[5]);
     if (acclz_cal >= 0x8000) { acclz_cal = -1.0*(0xffff - acclz_cal); }
     acclz_cal = 1.0 - acclz_cal / 0x4000;
 
@@ -124,19 +141,20 @@ static void accel_state()
     uint8_t regdata[6]; 
     float acclx, accly, acclz;
     i2c_read(0x68, 0x3b, regdata, 6);
-    acclx = 256*regdata[0] + regdata[1];
+    
+    acclx = acclx + 256*regdata[0] + regdata[1];
     if (acclx >= 0x8000) { acclx = -1.0*(0xffff - acclx); } //2s comp
     acclx = acclx / 0x4000; //full scale +/- 2g
+    acclx = acclx + acclx_cal;
 
-    accly = 256*regdata[2] + regdata[3];
+    accly = accly + 256*regdata[2] + regdata[3];
     if (accly >= 0x8000) { accly = -1.0*(0xffff - accly); }
     accly = accly / 0x4000;
+    accly = accly + accly_cal;
 
-    acclz = 256*regdata[4] + regdata[5];
+    acclz = acclz + 256*regdata[4] + regdata[5];
     if (acclz >= 0x8000) { acclz = -1.0*(0xffff - acclz); }
     acclz = acclz / 0x4000;
-    acclx = acclx + acclx_cal;
-    accly = accly + accly_cal;
     acclz = acclz + acclz_cal;
 
     accel_mag   = sqrt( acclx*acclx + accly*accly + acclz*acclz ); //throttle
@@ -173,10 +191,10 @@ void app_main()
 
     wifi_init();
     vTaskDelay(100);
-    espnow_init();  //starts task after init
+    //espnow_init();  //starts task after init
 
-    sbus_init();
-    xTaskCreate (sbus_tx, "sbus_tx_task", 4096, NULL, 5, NULL);
+    //sbus_init();
+    //xTaskCreate (sbus_tx, "sbus_tx_task", 4096, NULL, 5, NULL);
     printf("porttick = %d\n",portTICK_RATE_MS);
 
     vTaskDelay(10);
