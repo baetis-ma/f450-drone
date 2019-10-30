@@ -57,17 +57,18 @@ void app_main()
     vTaskDelay(10);
     espnow_init();  //starts task after init
 
-    printf("get here 0\n");
-    sbus_init();
-    printf("get here 1\n");
-    vTaskDelay(10);
-    printf("get here 2\n");
-    xTaskCreate (sbus_tx, "sbus_tx_task", 4096, NULL, 5, NULL);
+    //printf("get here 0\n");
+    //sbus_init();
+    //printf("get here 1\n");
+    //vTaskDelay(10);
+    //printf("get here 2\n");
+    //xTaskCreate (sbus_tx, "sbus_tx_task", 4096, NULL, 5, NULL);
 
     while (1) {
-       if((( 0.001 * esp_log_timestamp()) - timerold) > 0.5){
-            throttle = 1000; yaw = 1000; pitch = 1500; roll = 1500;
-            printf("watchdog disarming\n");
-       }
+       //if((( 0.001 * esp_log_timestamp()) - timerold) > 0.5){
+       //     throttle = 1000; yaw = 1000; pitch = 1500; roll = 1500;
+       //     printf("watchdog disarming\n");
+       //}
+       vTaskDelay(100);
     }
 }
