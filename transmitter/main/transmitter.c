@@ -18,12 +18,14 @@
 //globals 
 int throttle, yaw, pitch, roll, throttle_off;
 float fthrottle_off=1000;
+float fthrottle_last=1500, fyaw_last=1500, fpitch_last=1500, froll_last=1500;
 
 //required for espnow
 #include "../components/espnow.h"
-#define ESPNOW_SEND_DELAY   50
+#define ESPNOW_SEND_DELAY   60
 #define ESPNOW_SEND_LEN     200
-static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x4c, 0x11, 0xae, 0x75, 0x59, 0x58 };
+//static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x4c, 0x11, 0xae, 0x75, 0x59, 0x58 };
+static uint8_t fc_mac[ESP_NOW_ETH_ALEN] =        { 0x24, 0x6f, 0x28, 0x17, 0xff, 0xc8 };
 static xQueueHandle espnow_queue;
 static uint16_t s_espnow_seq[ESPNOW_DATA_MAX] = { 0, 0 };
 static void espnow_deinit(espnow_send_param_t *send_param);
@@ -37,7 +39,6 @@ static void adc_collect_data ()
 {
     //noise from wifi transmission requires some pretty aggresive filtering
     float fthrottle, fyaw, fpitch, froll;
-    float fthrottle_last=1500, fyaw_last=1500, fpitch_last=1500, froll_last=1500;
     float rate = .025; //40 msec loop
     float tau = .1;    //10 hz one pole LP filter
     float filter_T;
@@ -129,13 +130,8 @@ void espnow_data_prepare(espnow_send_param_t *send_param)
     buf->type =  ESPNOW_DATA_UNICAST;
     buf->state = send_param->state;
     buf->seq_num = s_espnow_seq[buf->type]++;
-    //buf->crc = 0;
     buf->magic = send_param->magic;
-
-    //char temp_str[200];
-    //sprintf(temp_str, "throttle=%d;yaw=%d;pitch=%d;roll=%d;\n\n", throttle_off, yaw, pitch, roll);
     sprintf( (char *) buf->payload, "throttle=%d;yaw=%d;pitch=%d;roll=%d;\n\n", throttle_off, yaw, pitch, roll);
-    //strncpy((char *) buf->payload, temp_str, send_param->len);
     buf->crc = crc16_le(UINT16_MAX, (uint8_t const *)buf, send_param->len - sizeof(espnow_data_t));
 }
 
@@ -173,10 +169,10 @@ void app_main()
        esp_now_send(send_param->dest_mac, send_param->buffer, send_param->len);
        //printf("throttle = %4d   yaw = %4d   pitch = %4d  roll = %4d\n", throttle_off, yaw, pitch, roll);
        //printf("throttle = %4d   yaw = %4d   pitch = %4d  roll = %4d\n", throttle, yaw, pitch, roll);
-       if(throttle != 1500)printf("%4d throttle = %d   throttle_off = %d\n", cnt++, throttle, throttle_off);
-       if(yaw != 1500)     printf("%4d yaw      = %d\n", cnt++, yaw);
-       if(pitch != 1500)   printf("%4d pitch    = %d\n", cnt++, pitch);
-       if(roll != 1500)    printf("%4d roll     = %d\n", cnt++, roll);
-       vTaskDelay(40/portTICK_RATE_MS); 
+       //if(throttle != 1500)printf("%4d throttle = %d   throttle_off = %d\n", cnt++, throttle, throttle_off);
+       //if(yaw != 1500)     printf("%4d yaw      = %d\n", cnt++, yaw);
+       //if(pitch != 1500)   printf("%4d pitch    = %d\n", cnt++, pitch);
+       //if(roll != 1500)    printf("%4d roll     = %d\n", cnt++, roll);
+       vTaskDelay(60/portTICK_RATE_MS); 
     }
 }

@@ -44,11 +44,11 @@ static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len
 int espnow_data_parse(uint8_t *data, uint16_t data_len, uint8_t *state, uint16_t *seq, int *magic)
 {
     espnow_data_t *buf = (espnow_data_t *)data;
-    //for (int a=10 ; a<data_len; a++){
-    //    printf("%c", data[a]);
-    //    if(data[a] == ';')break;
-    //}
-    //printf("\n");
+    for (int a=10 ; a<data_len; a++){
+        printf("%c", data[a]);
+        if(data[a] == ';')break;
+    }
+    printf("\n");
     uint16_t crc, crc_cal = 0;
 
     if (data_len < sizeof(espnow_data_t)) {
