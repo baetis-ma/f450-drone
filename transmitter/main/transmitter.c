@@ -19,6 +19,7 @@
 int throttle, yaw, pitch, roll, throttle_off;
 float fthrottle_off=1000;
 float fthrottle_last=1500, fyaw_last=1500, fpitch_last=1500, froll_last=1500;
+int calset = 0, astate = 0, calib = 0;
 
 //required for espnow
 #include "../components/espnow.h"
@@ -120,6 +121,12 @@ static void adc_collect_data ()
     froll_last = froll;
     roll = (int) froll;
     //ESP_LOGI(""," adc data read"); 
+
+    if (fthrottle > 1250 && yaw > 1250 && calset == 1) calset = 0; 
+    if (calib == 1) calib = 0;
+    if (fthrottle < 1200 && yaw < 1200 && calset == 0) {calib = 1; astate = 0;
+                                         calset = 1; fthrottle_off = 1000; }
+    if (fthrottle < 1200 && yaw > 1800) {astate = 1; fthrottle_off = 1000; }
 }
 
 void espnow_data_prepare(espnow_send_param_t *send_param)
@@ -131,7 +138,9 @@ void espnow_data_prepare(espnow_send_param_t *send_param)
     buf->state = send_param->state;
     buf->seq_num = s_espnow_seq[buf->type]++;
     buf->magic = send_param->magic;
-    sprintf( (char *) buf->payload, "throttle=%d;yaw=%d;pitch=%d;roll=%d;\n\n", throttle_off, yaw, pitch, roll);
+    sprintf( (char *) buf->payload, "astate=%d;calib=%d;throttle=%d;yaw=%d;pitch=%d;roll=%d;\n\n", 
+          astate, calib, throttle_off, yaw, pitch, roll);
+    //printf("%s", (char *)buf->payload);
     buf->crc = crc16_le(UINT16_MAX, (uint8_t const *)buf, send_param->len - sizeof(espnow_data_t));
 }
 
